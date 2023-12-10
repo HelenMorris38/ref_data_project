@@ -295,10 +295,56 @@ WHERE
     country = 1
 ORDER BY area;
 
+CREATE TABLE output_type
+(output_type_id CHAR(1) PRIMARY KEY NOT NULL,
+output_type VARCHAR(100));
 
+INSERT INTO output_type
+(output_type_id, output_type)
+VALUES
+("A", "Authored book"),
+("B", "Edited book"),
+("C", "Chapter in book"),
+("D", "Journal article"),
+("E", "Conference contribution"),
+("F", "Patent/ published patent application"),
+("G", "Software"),
+("H", "Website content"),
+("I", "Performance"),
+("J", "Composition"),
+("K", "Design"),
+("L", "Artefact"),
+("M", "Exhibition"),
+("N", "Research report for external body"),
+("P", "Devices and products"),
+("Q", "Digital or visual media"),
+("R", "Scholarly edition"),
+("S", "Research data sets and databases"),
+("T", "Other"),
+("U", "Working paper"),
+("V", "Translation");
 
-
-
-
-
+CREATE TABLE outputs
+(output_id INT NOT NULL PRIMARY KEY,
+institution INT NOT NULL,
+unit_of_assessment INT NOT NULL,
+output_type CHAR(1) NOT NULL,
+title VARCHAR(500),
+publisher VARCHAR(100),
+vol_title VARCHAR(500),
+vol VARCHAR(100),
+issue VARCHAR(10),
+doi VARCHAR(100),
+isbn VARCHAR(50),
+issn CHAR(9),
+month INT,
+year INT,
+oa_status INT,
+propose_dw BOOLEAN,
+reserve_output BOOLEAN,
+delayed_by_covid19 BOOLEAN,
+FOREIGN KEY (institution) REFERENCES institutions(institution_id),
+FOREIGN KEY (unit_of_assessment) REFERENCES units_of_assessment(uoa),
+FOREIGN KEY (output_type) REFERENCES output_type(output_type_id),
+FOREIGN KEY (oa_status) REFERENCES open_access_status(oa_id));
 
