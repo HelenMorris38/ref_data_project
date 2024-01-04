@@ -111,6 +111,7 @@ VALUES
 (8, "West Midlands"),
 (9, "Yorkshire and Humberside");
 
+
 CREATE TABLE institutions
 (institution_id INT NOT NULL PRIMARY KEY,
 institution_name VARCHAR(250),
@@ -346,4 +347,3 @@ FOREIGN KEY (institution) REFERENCES institutions(institution_id),
 FOREIGN KEY (unit_of_assessment) REFERENCES units_of_assessment(uoa),
 FOREIGN KEY (output_type) REFERENCES output_type(output_type_id),
 FOREIGN KEY (oa_status) REFERENCES open_access_status(oa_id));
-
