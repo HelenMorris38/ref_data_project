@@ -326,10 +326,11 @@ VALUES
 
 CREATE TABLE outputs
 (output_id INT NOT NULL PRIMARY KEY,
-institution INT NOT NULL,
+institution_id INT NOT NULL,
 unit_of_assessment INT NOT NULL,
 output_type CHAR(1) NOT NULL,
 title VARCHAR(500),
+place VARCHAR(100),
 publisher VARCHAR(100),
 vol_title VARCHAR(500),
 vol VARCHAR(100),
@@ -337,13 +338,36 @@ issue VARCHAR(10),
 doi VARCHAR(100),
 isbn VARCHAR(50),
 issn CHAR(9),
-month INT,
+patent_number VARCHAR(50),
+month VARCHAR(25),
 year INT,
+number_of_additional_authors INT,
 oa_status INT,
 propose_dw BOOLEAN,
 reserve_output BOOLEAN,
 delayed_by_covid19 BOOLEAN,
-FOREIGN KEY (institution) REFERENCES institutions(institution_id),
+FOREIGN KEY (institution_id) REFERENCES institutions(institution_id),
 FOREIGN KEY (unit_of_assessment) REFERENCES units_of_assessment(uoa),
 FOREIGN KEY (output_type) REFERENCES output_type(output_type_id),
 FOREIGN KEY (oa_status) REFERENCES open_access_status(oa_id));
+
+SELECT @@secure_file_priv;
+
+SET GLOBAL local_infile=1;
+
+LOAD DATA LOCAL INFILE '/Users/helenmorris/ref_data_project.csv'
+INTO TABLE outputs
+FIELDS TERMINATED BY ','
+ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS;
+
+UPDATE outputs
+SET outputs.propose_dw = false
+WHERE outputs.propose_dw = "FALSE";
+
+UPDATE outputs 
+SET 
+    outputs.number_of_additional_authors = NULL
+WHERE
+    outputs.number_of_additional_authors = '';
