@@ -351,7 +351,6 @@ FOREIGN KEY (unit_of_assessment) REFERENCES units_of_assessment(uoa),
 FOREIGN KEY (output_type) REFERENCES output_type(output_type_id),
 FOREIGN KEY (oa_status) REFERENCES open_access_status(oa_id));
 
-SELECT @@secure_file_priv;
 
 SET GLOBAL local_infile=1;
 
@@ -362,12 +361,26 @@ ENCLOSED BY '"'
 LINES TERMINATED BY '\n'
 IGNORE 1 ROWS;
 
-UPDATE outputs
-SET outputs.propose_dw = false
-WHERE outputs.propose_dw = "FALSE";
+-- UPDATE outputs
+-- SET outputs.propose_dw = false
+-- WHERE outputs.propose_dw = "FALSE";
 
-UPDATE outputs 
-SET 
-    outputs.number_of_additional_authors = NULL
-WHERE
-    outputs.number_of_additional_authors = '';
+-- UPDATE outputs 
+-- SET 
+--     outputs.number_of_additional_authors = NULL
+-- WHERE
+--     outputs.number_of_additional_authors = '';
+--     
+-- SELECT * FROM outputs LIMIT 100;
+
+SELECT 
+    inst.institution_name,
+    oa.open_access_status,
+    COUNT(oa.open_access_status)
+FROM
+    outputs
+        INNER JOIN
+    institutions AS inst ON outputs.institution_id = inst.institution_id
+        INNER JOIN
+    open_access_status AS oa ON outputs.oa_status = oa.oa_id
+GROUP BY inst.institution_name , oa.open_access_status;
