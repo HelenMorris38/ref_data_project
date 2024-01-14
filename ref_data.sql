@@ -4,7 +4,7 @@ USE ref_data;
 
 CREATE TABLE main_panel
 (main_panel_id CHAR(1) NOT NULL PRIMARY KEY,
-main_panel_name VARCHAR(250) NOT NULL);
+main_panel_name VARCHAR(15) NOT NULL);
 
 SELECT * FROM main_panel;
 
@@ -281,19 +281,6 @@ VALUES
 (10007167, "University of York", 1, 9),
 (10007713, "York St John University", 1, 9);
 
-SELECT * FROM institutions WHERE country = 2;
-
-SELECT * FROM institutions WHERE country = 3;
-
-SELECT * FROM institutions WHERE country = 4;
-
-SELECT 
-    *
-FROM
-    institutions
-WHERE
-    country = 1
-ORDER BY area;
 
 CREATE TABLE output_type
 (output_type_id CHAR(1) PRIMARY KEY NOT NULL,
@@ -361,18 +348,25 @@ ENCLOSED BY '"'
 LINES TERMINATED BY '\n'
 IGNORE 1 ROWS;
 
--- UPDATE outputs
--- SET outputs.propose_dw = false
--- WHERE outputs.propose_dw = "FALSE";
 
--- UPDATE outputs 
--- SET 
---     outputs.number_of_additional_authors = NULL
--- WHERE
---     outputs.number_of_additional_authors = '';
---     
--- SELECT * FROM outputs LIMIT 100;
+SET sql_safe_updates = 0;
+    
+UPDATE
+    outputs
+SET
+    place = IF(place = '', NULL, place),
+    publisher = IF(publisher = '', NULL, publisher),
+    vol_title = IF(vol_title = '', NULL, vol_title),
+	vol = IF(vol = '', NULL, vol),
+    doi = IF(doi = '', NULL, doi),
+    isbn = IF(isbn = '', NULL, isbn),
+	issn = IF(issn = '', NULL, issn),
+    patent_number = IF(patent_number = '', NULL, patent_number),
+    month = IF(month = '', NULL, month);
+    
+SET sql_safe_updates=1;
 
+-- total of each OA status byt institution
 SELECT 
     inst.institution_name,
     oa.open_access_status,
@@ -384,3 +378,39 @@ FROM
         INNER JOIN
     open_access_status AS oa ON outputs.oa_status = oa.oa_id
 GROUP BY inst.institution_name , oa.open_access_status;
+
+
+
+-- total of each type of output
+SELECT 
+    output_type.output_type, COUNT(outputs.output_type) as total_outputs_submitted
+FROM
+    output_type
+        INNER JOIN
+    outputs ON outputs.output_type = output_type.output_type_id
+GROUP BY outputs.output_type
+ORDER BY total_outputs_submitted DESC;
+
+-- type of outputs submitted by uoa
+SELECT 
+    uoa.uoa_name,
+    output_type.output_type,
+    COUNT(outputs.output_type) AS total_outputs_submitted
+FROM
+    units_of_assessment AS uoa
+        LEFT JOIN
+    outputs ON uoa.uoa = outputs.unit_of_assessment
+        LEFT JOIN
+    output_type ON output_type.output_type_id = outputs.output_type
+GROUP BY uoa.uoa_name, outputs.output_type;
+
+
+-- journals by month published
+-- total each type of OA status
+-- of those in scope, % that were compliant
+-- institutions that submitted in all uoas
+-- institutions that submitted in only one uoa
+-- uoa with the highest number of oa exceptions
+
+
+
