@@ -412,5 +412,66 @@ GROUP BY uoa.uoa_name, outputs.output_type;
 -- institutions that submitted in only one uoa
 -- uoa with the highest number of oa exceptions
 
+-- create a view that combines multiple tables, any type of join
+CREATE VIEW in_scope_of_oa AS
+    SELECT 
+        inst.institution_name, uoa.uoa_name, oa.open_access_status
+    FROM
+        outputs
+            INNER JOIN
+        institutions AS inst ON outputs.institution_id = inst.institution_id
+            INNER JOIN
+        units_of_assessment AS uoa ON outputs.unit_of_assessment = uoa.uoa
+            INNER JOIN
+        open_access_status AS oa ON outputs.oa_status = oa.oa_id
+        WHERE outputs.oa_status != 1;
+
+SELECT 
+    *
+FROM
+    in_scope_of_oa
+ORDER BY institution_name , uoa_name;
+
+-- DELIMITER //
+
+-- CREATE FUNCTION CalculateAveragePrice(
+-- 		p_category VARCHAR(255)
+-- 	)
+-- 	RETURNS DECIMAL(10, 2)
+-- 	DETERMINISTIC
+-- 	BEGIN
+-- 		DECLARE avg_price DECIMAL(10, 2);
+-- 		
+-- 		SELECT AVG(price) INTO avg_price
+-- 			FROM products
+-- 			WHERE category = p_category;
+-- 		RETURN avg_price;
+-- 	END //
+-- DELIMITER ;
+
+-- stored function that can be applied to a query
+DELIMITER //
+
+create function CalculatePercentageNonCompliantOutputs(institution_id INT, uoa INT)
+returns decimal(5, 2)
+deterministic
+begin 
+declare percent_non_compliant decimal(5, 2);
+SELECT 
+    COUNT(outputs.oa_status) / COUNT(outputs.output_type) * 100
+INTO percent_non_compliant FROM
+    outputs
+WHERE
+    outputs.oa_status = 8
+        AND outputs.output_type = 'D'
+        AND outputs.institution_id = institution_id
+        AND outputs.unit_of_assessment = uoa;
+return percent_non_compliant;
+end //
+DELIMITER ;
+
+select CalculatePercentageNonCompliantOutputs(10003956, 20);
+
+select institution_id, unit_of_assessment, oa_status from outputs where oa_status = 8;
 
 
