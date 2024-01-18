@@ -452,26 +452,26 @@ ORDER BY institution_name , uoa_name;
 -- stored function that can be applied to a query
 DELIMITER //
 
-create function CalculatePercentageNonCompliantOutputs(institution_id INT, uoa INT)
-returns decimal(5, 2)
+CREATE FUNCTION CalculatePercentageNonCompliantOutputs(institution_id INT, uoa INT)
+RETURNS decimal(5, 2)
 deterministic
-begin 
-declare percent_non_compliant decimal(5, 2);
+BEGIN 
+DECLARE percent_non_compliant decimal(5, 2);
 SELECT 
-    COUNT(outputs.oa_status) / COUNT(outputs.output_type) * 100
+(count(if(outputs.oa_status = 8, 1, null)) / count(if(outputs.output_type = 'D', 1, null) AND if (outputs.oa_status != 1, 1, null))) * 100
 INTO percent_non_compliant FROM
     outputs
 WHERE
-    outputs.oa_status = 8
-        AND outputs.output_type = 'D'
-        AND outputs.institution_id = institution_id
+        outputs.institution_id = institution_id
         AND outputs.unit_of_assessment = uoa;
 return percent_non_compliant;
-end //
+end//
 DELIMITER ;
 
 select CalculatePercentageNonCompliantOutputs(10003956, 20);
 
 select institution_id, unit_of_assessment, oa_status from outputs where oa_status = 8;
+
+DROP FUNCTION CalculatePercentageNonCompliantOutputs;
 
 
