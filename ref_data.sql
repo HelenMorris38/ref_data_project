@@ -432,24 +432,7 @@ FROM
     in_scope_of_oa
 ORDER BY institution_name , uoa_name;
 
--- DELIMITER //
 
--- CREATE FUNCTION CalculateAveragePrice(
--- 		p_category VARCHAR(255)
--- 	)
--- 	RETURNS DECIMAL(10, 2)
--- 	DETERMINISTIC
--- 	BEGIN
--- 		DECLARE avg_price DECIMAL(10, 2);
--- 		
--- 		SELECT AVG(price) INTO avg_price
--- 			FROM products
--- 			WHERE category = p_category;
--- 		RETURN avg_price;
--- 	END //
--- DELIMITER ;
-
--- stored function that can be applied to a query
 DELIMITER //
 
 CREATE FUNCTION CalculatePercentageNonCompliantOutputs(institution_id INT, uoa INT)
@@ -458,7 +441,7 @@ deterministic
 BEGIN 
 DECLARE percent_non_compliant decimal(5, 2);
 SELECT 
-(count(if(outputs.oa_status = 8, 1, null)) / count(if(outputs.output_type = 'D', 1, null) AND if (outputs.oa_status != 1, 1, null))) * 100
+(count(if(outputs.oa_status = 8, 1, null)) / nullif(count(if(outputs.output_type = 'D', 1, null) AND if(outputs.oa_status != 1, 1, null)), 0)) * 100
 INTO percent_non_compliant FROM
     outputs
 WHERE
@@ -472,6 +455,23 @@ select CalculatePercentageNonCompliantOutputs(10003956, 20);
 
 select institution_id, unit_of_assessment, oa_status from outputs where oa_status = 8;
 
-DROP FUNCTION CalculatePercentageNonCompliantOutputs;
+-- apply function to a query
+-- instituion name, uoa, non-compliant outputs, total in scope, function calculate percentage(inst id, uoa? or just uoa = number)
+SELECT 
+    inst.institution_name,
+    uoa.uoa_name,
+    COUNT(IF(outputs.oa_status = 8, 1, 0)) AS total_non_compliant_outputs,
+    COUNT(IF(outputs.output_type = 'D', 1, 0)
+        AND IF(outputs.oa_status != 1, 1, 0)) AS total_outputs_in_scope,
+    CALCULATEPERCENTAGENONCOMPLIANTOUTPUTS(outputs.institution_id,
+            outputs.unit_of_assessment) AS percentage_non_compliant
+FROM
+    outputs
+        INNER JOIN
+    institutions AS inst ON outputs.institution_id = inst.institution_id
+        INNER JOIN
+    units_of_assessment AS uoa ON outputs.unit_of_assessment = uoa.uoa
+GROUP BY outputs.oa_status , outputs.output_type , outputs.unit_of_assessment , outputs.institution_id
+HAVING percentage_non_compliant >= 4.00;
 
 
