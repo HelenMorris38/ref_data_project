@@ -366,7 +366,7 @@ SET
     
 SET sql_safe_updates=1;
 
--- total of each OA status byt institution
+-- total of each OA status by institution
 SELECT 
     inst.institution_name,
     oa.open_access_status,
@@ -424,7 +424,8 @@ CREATE VIEW in_scope_of_oa AS
         units_of_assessment AS uoa ON outputs.unit_of_assessment = uoa.uoa
             INNER JOIN
         open_access_status AS oa ON outputs.oa_status = oa.oa_id
-        WHERE outputs.oa_status != 1;
+    WHERE
+        outputs.oa_status BETWEEN 2 AND 8;
 
 SELECT 
     *
@@ -451,18 +452,14 @@ return percent_non_compliant;
 end//
 DELIMITER ;
 
-select CalculatePercentageNonCompliantOutputs(10003956, 20);
-
-select institution_id, unit_of_assessment, oa_status from outputs where oa_status = 8;
 
 -- apply function to a query
 -- instituion name, uoa, non-compliant outputs, total in scope, function calculate percentage(inst id, uoa? or just uoa = number)
+
 SELECT 
     inst.institution_name,
     uoa.uoa_name,
-    COUNT(IF(outputs.oa_status = 8, 1, 0)) AS total_non_compliant_outputs,
-    COUNT(IF(outputs.output_type = 'D', 1, 0)
-        AND IF(outputs.oa_status != 1, 1, 0)) AS total_outputs_in_scope,
+    COUNT(outputs.oa_status) AS total_non_compliant_outputs,
     CALCULATEPERCENTAGENONCOMPLIANTOUTPUTS(outputs.institution_id,
             outputs.unit_of_assessment) AS percentage_non_compliant
 FROM
@@ -472,6 +469,34 @@ FROM
         INNER JOIN
     units_of_assessment AS uoa ON outputs.unit_of_assessment = uoa.uoa
 GROUP BY outputs.oa_status , outputs.output_type , outputs.unit_of_assessment , outputs.institution_id
-HAVING percentage_non_compliant >= 4.00;
+HAVING outputs.oa_status = 8
+    AND percentage_non_compliant >= 5.00
+    AND outputs.output_type = 'D'
+    AND total_non_compliant_outputs > 1
+ORDER BY percentage_non_compliant DESC;
+
+SELECT 
+    inst.institution_name,
+    oa.open_access_status,
+    COUNT(oa.open_access_status)
+FROM
+    outputs
+        INNER JOIN
+    institutions AS inst ON outputs.institution_id = inst.institution_id
+        INNER JOIN
+    open_access_status AS oa ON outputs.oa_status = oa.oa_id
+GROUP BY inst.institution_name , oa.open_access_status;
 
 
+SELECT 
+    outputs.oa_status, COUNT(outputs.oa_status)
+FROM
+    outputs
+WHERE
+    outputs.oa_status IN (SELECT 
+            oa.oa_id
+        FROM
+            open_access_status AS oa
+        WHERE
+            oa.oa_id BETWEEN 2 AND 8)
+GROUP BY outputs.oa_status;
