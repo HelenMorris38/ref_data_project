@@ -65,6 +65,7 @@ VALUES
 (33, "Music, Drama, Dance, Performing Arts, Film and Screen Studies", "D"),
 (34, "Communication, Cultural and Media Studies, Library and Information Management", "D");
 
+
 CREATE TABLE open_access_status
 (oa_id INT NOT NULL PRIMARY KEY,
 open_access_status VARCHAR(100));
@@ -93,6 +94,7 @@ VALUES
 (2, "Northern Ireland"),
 (3, "Scotland"),
 (4, "Wales");
+
 
 CREATE TABLE area
 (area_id INT NOT NULL PRIMARY KEY,
@@ -311,6 +313,7 @@ VALUES
 ("U", "Working paper"),
 ("V", "Translation");
 
+
 CREATE TABLE outputs
 (output_id INT NOT NULL PRIMARY KEY,
 institution_id INT NOT NULL,
@@ -338,7 +341,9 @@ FOREIGN KEY (unit_of_assessment) REFERENCES units_of_assessment(uoa),
 FOREIGN KEY (output_type) REFERENCES output_type(output_type_id),
 FOREIGN KEY (oa_status) REFERENCES open_access_status(oa_id));
 
-
+-- Import from cv into outputs table. 
+-- The secure_file_priv variable was set to null and I read a lot of documentation and stack overflow but was unable to change this.
+-- This is the workaround I found below which I know isn't as secure.
 SET GLOBAL local_infile=1;
 
 LOAD DATA LOCAL INFILE '/Users/helenmorris/ref_data_project.csv'
@@ -348,7 +353,7 @@ ENCLOSED BY '"'
 LINES TERMINATED BY '\n'
 IGNORE 1 ROWS;
 
-
+-- Update empty strings from the csv file to null value. I'd like to look into more whether this was a sensible decision.
 SET sql_safe_updates = 0;
     
 UPDATE
@@ -380,7 +385,6 @@ FROM
 GROUP BY inst.institution_name , oa.open_access_status;
 
 
-
 -- total of each type of output
 SELECT 
     output_type.output_type, COUNT(outputs.output_type) as total_outputs_submitted
@@ -404,15 +408,22 @@ FROM
     output_type ON output_type.output_type_id = outputs.output_type
 GROUP BY uoa.uoa_name, outputs.output_type;
 
+-- Example query with a subquery.
+SELECT 
+    outputs.oa_status, COUNT(outputs.oa_status)
+FROM
+    outputs
+WHERE
+    outputs.oa_status IN (SELECT 
+            oa.oa_id
+        FROM
+            open_access_status AS oa
+        WHERE
+            oa.oa_id BETWEEN 2 AND 8)
+GROUP BY outputs.oa_status;
 
--- journals by month published
--- total each type of OA status
--- of those in scope, % that were compliant
--- institutions that submitted in all uoas
--- institutions that submitted in only one uoa
--- uoa with the highest number of oa exceptions
 
--- create a view that combines multiple tables, any type of join
+-- Create a view that combines multiple tables, any type of join
 CREATE VIEW in_scope_of_oa AS
     SELECT 
         inst.institution_name, uoa.uoa_name, oa.open_access_status
@@ -427,13 +438,21 @@ CREATE VIEW in_scope_of_oa AS
     WHERE
         outputs.oa_status BETWEEN 2 AND 8;
 
+-- Example query that uses the view, logically arranged result.
+-- The 5 UOAs that have the highest number of Access Exceptions submitted.
 SELECT 
-    *
+    uoa_name,
+    SUM(IF(open_access_status = 'Access exception',
+        1,
+        0)) AS total_access_exceptions
 FROM
     in_scope_of_oa
-ORDER BY institution_name , uoa_name;
+GROUP BY uoa_name
+ORDER BY total_access_exceptions DESC
+LIMIT 5;
 
-
+-- Create a stored function that can be applied to a query in the DB.
+-- Calculates the percentage of non-compliant outputs within a UOA (institutions were only allowed to submit 5% of in-scope outputs as non-compliant within a UOA and received penalties if they went over).
 DELIMITER //
 
 CREATE FUNCTION CalculatePercentageNonCompliantOutputs(institution_id INT, uoa INT)
@@ -453,8 +472,9 @@ end//
 DELIMITER ;
 
 
--- apply function to a query
--- instituion name, uoa, non-compliant outputs, total in scope, function calculate percentage(inst id, uoa? or just uoa = number)
+-- Apply function to a query.
+-- Example query with group by and having.
+-- Due to the volume of data this query is quite slow to run (~ 40 seconds) and I'd like to look into how to speed it up.
 
 SELECT 
     inst.institution_name,
@@ -474,29 +494,3 @@ HAVING outputs.oa_status = 8
     AND outputs.output_type = 'D'
     AND total_non_compliant_outputs > 1
 ORDER BY percentage_non_compliant DESC;
-
-SELECT 
-    inst.institution_name,
-    oa.open_access_status,
-    COUNT(oa.open_access_status)
-FROM
-    outputs
-        INNER JOIN
-    institutions AS inst ON outputs.institution_id = inst.institution_id
-        INNER JOIN
-    open_access_status AS oa ON outputs.oa_status = oa.oa_id
-GROUP BY inst.institution_name , oa.open_access_status;
-
-
-SELECT 
-    outputs.oa_status, COUNT(outputs.oa_status)
-FROM
-    outputs
-WHERE
-    outputs.oa_status IN (SELECT 
-            oa.oa_id
-        FROM
-            open_access_status AS oa
-        WHERE
-            oa.oa_id BETWEEN 2 AND 8)
-GROUP BY outputs.oa_status;
