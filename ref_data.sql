@@ -452,7 +452,7 @@ ORDER BY total_access_exceptions DESC
 LIMIT 5;
 
 -- Create a stored function that can be applied to a query in the DB.
--- Calculates the percentage of non-compliant outputs within a UOA (institutions were only allowed to submit 5% of in-scope outputs as non-compliant within a UOA and received penalties if they went over).
+-- Calculates the percentage of non-compliant outputs within a UOA (institutions were only allowed to submit 5%, or 1 output, of in-scope outputs as non-compliant within a UOA and received penalties if they went over).
 DELIMITER //
 
 CREATE FUNCTION CalculatePercentageNonCompliantOutputs(institution_id INT, uoa INT)
@@ -474,6 +474,7 @@ DELIMITER ;
 
 -- Apply function to a query.
 -- Example query with group by and having.
+-- Query shows the institutions that exceeded the 5% non-compliant limit 
 -- Due to the volume of data this query is quite slow to run (~ 40 seconds) and I'd like to look into how to speed it up.
 
 SELECT 
@@ -494,3 +495,36 @@ HAVING outputs.oa_status = 8
     AND outputs.output_type = 'D'
     AND total_non_compliant_outputs > 1
 ORDER BY percentage_non_compliant DESC;
+
+
+-- stored procedure
+-- procedure checks the non compliant outputs for a given institution using the stored function so you can see how close a unit of assessment is to the 5% limit
+DELIMITER %%
+
+CREATE PROCEDURE CheckNonCompliantOutputs(IN institution_id INT)
+BEGIN
+SELECT
+inst.institution_name,
+uoa.uoa_name,
+    COUNT(outputs.oa_status) AS total_non_compliant_outputs,
+    CALCULATEPERCENTAGENONCOMPLIANTOUTPUTS(outputs.institution_id,
+            outputs.unit_of_assessment) AS percentage_non_compliant
+            FROM
+    outputs
+        INNER JOIN
+    institutions AS inst ON outputs.institution_id = inst.institution_id
+        INNER JOIN
+    units_of_assessment AS uoa ON outputs.unit_of_assessment = uoa.uoa
+GROUP BY outputs.oa_status , outputs.output_type , outputs.unit_of_assessment , outputs.institution_id
+HAVING outputs.oa_status = 8
+    AND outputs.institution_id = institution_id
+    AND outputs.output_type = 'D'
+    AND total_non_compliant_outputs > 1
+ORDER BY percentage_non_compliant DESC;
+END %%
+
+DELIMITER ;
+
+-- Check percentage of non compliant outputs in any unit of assessment at a given institution
+CALL CheckNonCompliantOutputs(10000961);
+
