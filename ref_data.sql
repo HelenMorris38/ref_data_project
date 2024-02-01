@@ -410,7 +410,7 @@ GROUP BY uoa.uoa_name, outputs.output_type;
 
 -- Example query with a subquery.
 SELECT 
-    outputs.oa_status, COUNT(outputs.oa_status)
+    outputs.oa_status, COUNT(outputs.oa_status) AS total_number_submitted
 FROM
     outputs
 WHERE
@@ -424,6 +424,7 @@ GROUP BY outputs.oa_status;
 
 
 -- Create a view that combines multiple tables, any type of join
+-- all outputs submitted within scope of OA policy
 CREATE VIEW in_scope_of_oa AS
     SELECT 
         inst.institution_name, uoa.uoa_name, oa.open_access_status
@@ -477,6 +478,9 @@ DELIMITER ;
 -- Query shows the institutions that exceeded the 5% non-compliant limit 
 -- Due to the volume of data this query is quite slow to run (~ 40 seconds) and I'd like to look into how to speed it up.
 
+
+create index output_index on outputs (institution_id, unit_of_assessment, output_type, oa_status);
+
 SELECT 
     inst.institution_name,
     uoa.uoa_name,
@@ -498,7 +502,7 @@ ORDER BY percentage_non_compliant DESC;
 
 
 -- stored procedure
--- procedure checks the non compliant outputs for a given institution using the stored function so you can see how close a unit of assessment is to the 5% limit
+-- Procedure checks percentage of non compliant outputs in any unit of assessment at a given institution so you can see how close a unit of assessment is to the 5% limit
 DELIMITER %%
 
 CREATE PROCEDURE CheckNonCompliantOutputs(IN institution_id INT)
@@ -525,6 +529,7 @@ END %%
 
 DELIMITER ;
 
+-- call the procedure
 -- Check percentage of non compliant outputs in any unit of assessment at a given institution
 CALL CheckNonCompliantOutputs(10000961);
 
