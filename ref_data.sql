@@ -481,6 +481,10 @@ DELIMITER ;
 
 create index output_index on outputs (institution_id, unit_of_assessment, output_type, oa_status);
 
+create index inst_index on institutions (institution_name);
+
+create index uoa_index on units_of_assessment (uoa_name);
+
 SELECT 
     inst.institution_name,
     uoa.uoa_name,
@@ -493,10 +497,11 @@ FROM
     institutions AS inst ON outputs.institution_id = inst.institution_id
         INNER JOIN
     units_of_assessment AS uoa ON outputs.unit_of_assessment = uoa.uoa
+WHERE
+    outputs.oa_status = 8
+        AND outputs.output_type = 'D'
 GROUP BY outputs.oa_status , outputs.output_type , outputs.unit_of_assessment , outputs.institution_id
-HAVING outputs.oa_status = 8
-    AND percentage_non_compliant >= 5.00
-    AND outputs.output_type = 'D'
+HAVING percentage_non_compliant >= 5.00
     AND total_non_compliant_outputs > 1
 ORDER BY percentage_non_compliant DESC;
 
